@@ -8,7 +8,7 @@
 
 #include<time.h>
 
-#define MAX 102
+#define MAX 10
 
 pthread_mutex_t the_mutex;
 
@@ -16,19 +16,7 @@ pthread_cond_t condc, condp;
 
 int buffer = 0;
 
-
-
-int getRand()
-
-{
-
-	srand((unsigned)time(NULL));
-
-	return rand()%15 + 1;
-
-}
-
-
+int total_consumed = 0;
 
 void *producer(void *ptr)
 
@@ -36,7 +24,7 @@ void *producer(void *ptr)
 
 	int i;
 
-	for(i = 1; i <=MAX; i++)
+	for(i = 1; ; i++)
 
 	{
 
@@ -50,9 +38,9 @@ void *producer(void *ptr)
 
 		}
 
-		buffer = buffer + 21 >= MAX ? MAX : buffer + 21;
+		buffer += 1;
 
-		printf("produce 21, buffer remains %d\n", buffer);
+		printf("produce 1, buffer remains %d\n", buffer);
 
 		pthread_cond_signal(&condc);
 
@@ -76,7 +64,7 @@ void *consumer(void *ptr)
 
 	int i;	
 
-	for(i = 1; i <=MAX; i++)
+	for(i = 1; ; i++)
 
 	{
 
@@ -92,11 +80,25 @@ void *consumer(void *ptr)
 
 		}
 
-		int k = getRand();
+		buffer -= 1;
 
-		buffer = buffer - k <= 0? 0: buffer-k;
+		printf("CONSUMED 1, buffer remains %d\n", buffer);
 
-		printf("CONSUMED %d, buffer remains %d\n",k, buffer);
+		total_consumed += 1;
+
+		if(total_consumed == 50)
+
+		{
+			pthread_cond_destroy(&condc);
+
+			pthread_cond_destroy(&condp);
+
+			pthread_mutex_destroy(&the_mutex);
+		
+			exit(0);
+		}
+
+		printf("TOTAL CONSUMED: %d\n", total_consumed);
 
 		pthread_cond_signal(&condp);
 
@@ -116,7 +118,7 @@ int main()
 
 {
 
-	pthread_t pro1, pro2, con1, con2, con3;
+	pthread_t pro1, pro2, pro3, con2, con3;
 
 	pthread_mutex_init(&the_mutex, 0);
 
@@ -124,7 +126,7 @@ int main()
 
 	pthread_cond_init(&condp, 0);
 
-	pthread_create(&con1, 0, consumer, 0);
+	pthread_create(&pro3, 0, producer, 0);
 
 	pthread_create(&con2, 0, consumer, 0);
 
@@ -138,16 +140,10 @@ int main()
 
 	pthread_join(pro2, 0);
 
-	pthread_join(con1, 0);
-
 	pthread_join(con2, 0);
 
 	pthread_join(con3, 0);
 
-	pthread_cond_destroy(&condc);
-
-	pthread_cond_destroy(&condp);
-
-	pthread_mutex_destroy(&the_mutex);
+	pthread_join(pro3, 0);
 
 }
